@@ -2,7 +2,6 @@ from openai import AsyncClient
 from config import *
 from db import *
 
-messages: dict[str, list] = load_json("bot_memory.json")
 
 class Ai:
     def __init__(self):
@@ -10,22 +9,24 @@ class Ai:
             api_key=CHUTES_API_KEY,
             base_url=BASE_URL,
         )
+        self.temperature = AI_TEMPERATURE
+        self.messages: dict[str, list] = load_json("memory.json")
         
     def add_msg(self, id: int | str, role: str, msg: str):
         if isinstance(id, int):
             id = str(id)
         
-        if not messages.get(id):
-            messages[id] = []
+        if not self.messages.get(id):
+            self.messages[id] = []
             
-        if len(messages[id]) == 0 and role != SYSTEM_ROLE:
-            messages[id].append({
+        if len(self.messages[id]) == 0 and role != SYSTEM_ROLE:
+            self.messages[id].append({
                 "role": SYSTEM_ROLE, 
                 "content": SYSTEM_PROMPT
             })
             
-        messages[id].append({"role": role, "content": msg})
-        save_json(messages, "memory.json")
+        self.messages[id].append({"role": role, "content": msg})
+        save_json(self.messages, "memory.json")
 
     async def ask(self, id: int | str, question: str) -> str:
         if isinstance(id, int):
@@ -35,7 +36,7 @@ class Ai:
 
         response = await self.ai.chat.completions.create(
             model=AI_MODEL,
-            messages=messages[id],
+            messages=self.messages[id],
             temperature=AI_TEMPERATURE,
             max_tokens=AI_MAX_TOKENS
         )
