@@ -1,7 +1,7 @@
 AI_NAME = "Ре-Клей"
 AI_TEMPERATURE = 0.7
 AI_MODEL = "deepseek-ai/DeepSeek-V3-0324"
-AI_MAX_TOKENS = 1024
+AI_MAX_TOKENS = 4096
 BASE_URL = "https://llm.chutes.ai/v1"
 
 SYSTEM_ROLE = "system"
