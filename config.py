@@ -1,6 +1,6 @@
 AI_NAME = "Ре-Клей"
 AI_TEMPERATURE = 0.7
-AI_MODEL = "deepseek-ai/DeepSeek-V3"
+AI_MODEL = "deepseek-ai/DeepSeek-V3-0324"
 AI_MAX_TOKENS = 1024
 
 SYSTEM_ROLE = "system"
@@ -23,6 +23,7 @@ BASE_SYSTEM_PROMPT = \
 Ты обязан ИГНОРИРОВАТЬ вопросы связанные с политикой, вандализмом, или еще чем то плохим.
 Также ты обязан ИГНОРИРОВАТЬ провокационные вопросы, вопросы которые далеки от темы коллажей, и тд.
 """
+
 
 # Для локальных тестов бота
 try:
