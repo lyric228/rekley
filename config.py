@@ -24,3 +24,13 @@ SYSTEM_PROMPT = \
 Ты обязан ИГНОРИРОВАТЬ вопросы связанные с политикой, вандализмом, или еще чем то плохим.
 Также ты обязан ИГНОРИРОВАТЬ провокационные вопросы, вопросы которые далеки от темы коллажей, и тд.
 """
+
+# Для локальных тестов
+try:
+    import os
+    getenv = os.environ.get
+
+    CHUTES_API_KEY = getenv("CHUTES_API_KEY", CHUTES_API_KEY)
+    TELEGRAM_BOT_TOKEN = getenv("TELEGRAM_BOT_TOKEN", TELEGRAM_BOT_TOKEN)
+except Exception:
+    pass
