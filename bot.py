@@ -11,13 +11,6 @@ bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 dp.include_router(router)
 
-
-def check_old(id: str) -> None:
-    messages = ai.messages.get(id, [])
-    if len(messages) > 1 and messages[-1]["role"] == SYSTEM_ROLE:
-        messages.pop()
-
-
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="💡 Идеи 💡"), KeyboardButton(text="🔧 Техники 🔧")],
@@ -29,11 +22,17 @@ main_keyboard = ReplyKeyboardMarkup(
 )
 
 
+def check_old(id: str) -> None:
+    messages = ai.messages.get(id, [])
+    if len(messages) > 1 and messages[-1]["role"] == SYSTEM_ROLE:
+        messages.pop()
+
+
 async def handle_menu_button(msg: Message, button_name: str, prompt: str) -> None:
-    chat_id = str(msg.chat.id)
-    check_old(chat_id)
-    await bot.send_message(chat_id, prompt)
-    ai.add_msg(chat_id, SYSTEM_ROLE, f"Теперь пользователь выбрал тему {button_name}")
+    id = str(msg.chat.id)
+    check_old(id)
+    await bot.send_message(id, prompt)
+    ai.add_msg(id, SYSTEM_ROLE, f"Теперь пользователь выбрал тему {button_name}")
 
 
 @router.message(CommandStart())
@@ -46,8 +45,6 @@ async def handle_start(msg: Message) -> None:
     )
     await msg.answer(welcome_text, reply_markup=main_keyboard)
 
-
-# Menu button handlers
 @router.message(F.text == "💡 Идеи 💡")
 async def handle_kb_idea(msg: Message) -> None:
     await handle_menu_button(
@@ -102,13 +99,12 @@ async def handle_kb_inspiration(msg: Message) -> None:
         "Давай подберём что-то для тебя!"
     )
 
-
 @router.message(F.text)
 async def handle_msg(msg: Message) -> None:
-    """Handle all text messages not caught by other handlers."""
     try:
+        id = str(msg.chat.id)
         wait_msg = await msg.answer("Думаю...   (Ответ займет около минуты)")
-        answer = await ai.ask(msg.chat.id, msg.text)
+        answer = await ai.ask(id, msg.text)
         await wait_msg.edit_text(answer)
         
     except TelegramBadRequest as e:
