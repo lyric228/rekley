@@ -108,4 +108,4 @@ async def handle_msg(msg: Message) -> None:
         await wait_msg.edit_text(answer)
         
     except TelegramBadRequest as e:
-        print(f"Telegram API error: {e}")
+        warn(f"Telegram API error: {e}")
