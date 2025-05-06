@@ -25,7 +25,7 @@ main_keyboard = ReplyKeyboardMarkup(
 def check_old(id: str) -> None:
     messages = ai.messages.get(id, [])
     if len(messages) > 1 and messages[-1]["role"] == SYSTEM_ROLE:
-        messages.pop()
+        ai.messages[id].pop()
 
 
 async def handle_menu_button(msg: Message, button_name: str, prompt: str) -> None:
@@ -108,13 +108,7 @@ async def handle_msg(msg: Message) -> None:
         await wait_msg.edit_text(answer)
         
     except TelegramBadRequest as e:
-        if "message to edit not found" in str(e) or "message is not modified" in str(e):
-             warn(f"Could not edit message for chat {id}: {e}. Sending new message.")
-             await msg.answer(answer, reply_markup=main_keyboard)
-        else:
-            warn(f"Telegram API error in handle_msg for chat {id}: {e}")
-            await msg.answer("Произошла ошибка при обработке вашего сообщения.", reply_markup=main_keyboard)
+        warn(f"Произошла ошибка во время обработки сообщения в чате с айди {id}: {e}")
 
     except Exception as e:
-        warn(f"Unhandled error in handle_msg for chat {id}: {e}")
-        await msg.answer("Произошла непредвиденная ошибка.", reply_markup=main_keyboard)
+        warn(f"Произошла непредвиденная ошибка в чате с айди {id}: {e}")
