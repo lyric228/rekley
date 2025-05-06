@@ -158,4 +158,4 @@ cython_debug/
 .pypirc
 
 # Secrets
-secret.py
+secrets.py

@@ -31,7 +31,7 @@ def check_old(id: str) -> None:
 async def handle_menu_button(msg: Message, button_name: str, prompt: str) -> None:
     id = str(msg.chat.id)
     check_old(id)
-    await bot.send_message(id, prompt)
+    await bot.send_message(id, prompt, reply_markup=main_keyboard)
     ai.add_msg(id, SYSTEM_ROLE, f"Теперь пользователь выбрал тему {button_name}")
 
 
@@ -103,9 +103,18 @@ async def handle_kb_inspiration(msg: Message) -> None:
 async def handle_msg(msg: Message) -> None:
     try:
         id = str(msg.chat.id)
-        wait_msg = await msg.answer("Думаю...   (Ответ займет около минуты)")
+        wait_msg = await msg.answer("Думаю...   (Ответ займет около минуты)", reply_markup=main_keyboard)
         answer = await ai.ask(id, msg.text)
         await wait_msg.edit_text(answer)
         
     except TelegramBadRequest as e:
-        warn(f"Telegram API error: {e}")
+        if "message to edit not found" in str(e) or "message is not modified" in str(e):
+             warn(f"Could not edit message for chat {id}: {e}. Sending new message.")
+             await msg.answer(answer, reply_markup=main_keyboard)
+        else:
+            warn(f"Telegram API error in handle_msg for chat {id}: {e}")
+            await msg.answer("Произошла ошибка при обработке вашего сообщения.", reply_markup=main_keyboard)
+
+    except Exception as e:
+        warn(f"Unhandled error in handle_msg for chat {id}: {e}")
+        await msg.answer("Произошла непредвиденная ошибка.", reply_markup=main_keyboard)

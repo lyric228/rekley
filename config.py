@@ -28,6 +28,6 @@ SYSTEM_PROMPT = \
 
 # Для локальных тестов
 try:
-    from secret import *
+    from secrets import *
 except Exception:
     pass

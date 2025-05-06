@@ -14,13 +14,19 @@ class Ai:
         self.memory_path: str = "memory.json"
         self.messages: dict[str, list[dict[str, any]]] = load_json(self.memory_path) or {}
 
-    def _add_msg(self, id: str, message: dict):
+    def add_msg(self, id: str, role: str, message: str):
+        if id not in self.messages:
+             self.messages[id] = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
+        self.messages[id].append({"role": role, "content": message})
+        save_json(self.messages, self.memory_path)
+
+    def add_dict_msg(self, id: str, message: dict):
         if id not in self.messages:
              self.messages[id] = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
         self.messages[id].append(message)
         save_json(self.messages, self.memory_path)
 
-    def _get_or_init_messages(self, id: str) -> list[dict[str, any]]:
+    def get_or_init_messages(self, id: str) -> list[dict[str, any]]:
         if id not in self.messages or not self.messages[id]:
             self.messages[id] = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
         return list(self.messages[id])
@@ -30,11 +36,11 @@ class Ai:
             warn("question is None!")
             return ""
 
-        current_messages = self._get_or_init_messages(id)
+        current_messages = self.get_or_init_messages(id)
 
         user_message = {"role": USER_ROLE, "content": question}
         current_messages.append(user_message)
-        self._add_msg(id, user_message)
+        self.add_dict_msg(id, user_message)
 
         final_answer: str | None = None
 
@@ -49,7 +55,7 @@ class Ai:
             response_message = response.choices[0].message
             response_message_dict = response_message.model_dump(exclude_unset=True)
 
-            self._add_msg(id, response_message_dict)
+            self.add_dict_msg(id, response_message_dict)
             current_messages.append(response_message_dict)
 
             tool_calls = response_message.tool_calls
@@ -90,7 +96,7 @@ class Ai:
                     tool_results_messages.append(tool_message)
 
                 for msg in tool_results_messages:
-                    self._add_msg(id, msg)
+                    self.add_dict_msg(id, msg)
                     current_messages.append(msg)
 
                 final_response = await self.ai.chat.completions.create(
@@ -101,7 +107,7 @@ class Ai:
                 )
                 final_answer = final_response.choices[0].message.content
                 final_answer_message = final_response.choices[0].message.model_dump(exclude_unset=True)
-                self._add_msg(id, final_answer_message)
+                self.add_dict_msg(id, final_answer_message)
 
             else:
                 final_answer = response_message.content
