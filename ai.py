@@ -31,6 +31,7 @@ class Ai:
             self.messages[id] = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
         self.messages[id].append(message)
         self.save_messages()
+
     def get_or_init_messages(self, id: str) -> list[dict[str, any]]:
         if id not in self.messages:
             self.messages[id] = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
@@ -97,3 +98,17 @@ class Ai:
                 "content": f"Ошибка при выполнении поиска в Pinterest: {e}",
                 "tool_call_id": tool_call.id
             }
+
+    async def generate_therapy_task(self, id: str, duration: str) -> str:
+        prompt = (
+            f"Сгенерируй короткое арт-терапевтическое задание в стиле коллажа для продолжительности {duration}. "
+            "Формат: 1-2 предложения. Примеры тем: эмоции, отношения, самоидентификация. "
+            "Используй творческие формулировки."
+        )
+        response = await self.ai.chat.completions.create(
+            model=AI_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=1.0,
+            max_tokens=150
+        )
+        return response.choices[0].message.content
