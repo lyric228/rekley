@@ -336,8 +336,10 @@ async def handle_reflection(msg: Message, state: FSMContext):
         return
 
     if msg.text == "Да":
+        id = str(msg.chat.id)
+        await msg.answer("Генерирую вопросы...")
         reflection_prompt = "Сформулируй вопрос для рефлексии по выполненному арт-терапевтическому заданию"
-        reflection_question = await ai.ask(str(msg.chat.id), reflection_prompt)
+        reflection_question = await ai.ask(id, reflection_prompt)
         await msg.answer(f"Отлично! {reflection_question}", reply_markup=main_keyboard)
     else:
         await msg.answer("Спасибо, что сделал задание со мной! Надеюсь, тебе было интересно)", reply_markup=main_keyboard)
