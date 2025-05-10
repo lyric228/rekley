@@ -157,5 +157,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-secrets.py
+local_secrets.py
 memory.json

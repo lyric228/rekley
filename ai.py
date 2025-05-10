@@ -135,3 +135,4 @@ class Ai:
             "name": tool_call.function.name,
             "content": content,
         }
+

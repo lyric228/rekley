@@ -1,11 +1,13 @@
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, FSInputFile, InputMediaPhoto
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramBadRequest
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.filters import CommandStart
-from ai import * 
+from ai import *
+import logging
 import asyncio
+import os
 
 
 ai = Ai()
@@ -55,6 +57,37 @@ def add_msg(id: str, role: str, msg: str):
         ai.messages[id] = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
     ai.messages[id].append({"role": role, "content": msg})
 
+async def send_collage_info(msg: Message) -> None:
+    media_group = []
+    folder_path = "files"
+    all_files_found = True
+    id = msg.chat.id
+
+    for i in range(10):
+        file_path = os.path.join(folder_path, f"{i}.jpg")
+
+        if not os.path.exists(file_path):
+            logging.error(f"Файл не найден: {file_path}. Отправка медиагруппы отменена.")
+            all_files_found = False
+            break
+
+        photo_file = FSInputFile(file_path)
+
+        if i == 0:
+            media_group.append(InputMediaPhoto(media=photo_file, caption=START_TEXT_COLLAGE))
+        else:
+            media_group.append(InputMediaPhoto(media=photo_file))
+
+    if all_files_found and media_group:
+        try:
+            await bot.send_media_group(chat_id=id, media=media_group)
+            logging.info(f"Медиагруппа с текстом успешно отправлена в чат {id}")
+        except Exception as e:
+            logging.error(f"Не удалось отправить медиагруппу в чат {id}: {e}")
+    elif not all_files_found:
+        logging.warning("Не все фото были найдены.")
+    else:
+        logging.warning(f"Медиагруппа для чата {id} пуста, хотя ошибок поиска файлов не было.")
 
 async def handle_menu_button(msg: Message, button_name: str, prompt: str) -> None:
     id = str(msg.chat.id)
@@ -93,6 +126,8 @@ async def handle_start(msg: Message, state: FSMContext) -> None:
         "создать новые, уникальные работы, найти вдохновение."
     )
     await msg.answer(welcome_text, reply_markup=main_keyboard)
+
+    await send_collage_info(msg)
 
 @router.message(F.text == "💡 Идеи 💡")
 async def handle_kb_idea(msg: Message, state: FSMContext) -> None:
