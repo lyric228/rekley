@@ -1,13 +1,13 @@
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, FSInputFile, InputMediaPhoto
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.state import State, StatesGroup
 from aiogram import Bot, Dispatcher, Router, F
+from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
+from logging import warn, error, info
+from os.path import join, exists
 from ai import *
-import logging
 import asyncio
-import os
 
 
 ai = Ai()
@@ -20,11 +20,10 @@ main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="💡 Идеи 💡"), KeyboardButton(text="🔧 Техники 🔧")],
         [KeyboardButton(text="📝 Задания 📝"), KeyboardButton(text="📚 Материалы 📚")],
-        [KeyboardButton(text="🎨 Референсы 🎨"), KeyboardButton(text="✨ Вдохновение ✨")],
-        [KeyboardButton(text="🎭 Арт терапия 🎭")]
+        [KeyboardButton(text="🎭 Арт терапия 🎭"), KeyboardButton(text="✨ Вдохновение ✨")],
     ],
     resize_keyboard=True,
-    one_time_keyboard=False
+    one_time_keyboard=False,
 )
 
 class TherapyStates(StatesGroup):
@@ -37,16 +36,19 @@ therapy_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="15 минут"), KeyboardButton(text="30 минут")],
         [KeyboardButton(text="60 минут"), KeyboardButton(text="Свободный режим")],
-        [KeyboardButton(text="↩️ Назад в меню")]
+        [KeyboardButton(text="↩️ Назад в меню")],
     ],
-    resize_keyboard=True
+    resize_keyboard=True,
 )
 
 reflection_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Да"), KeyboardButton(text="Нет")],
+        [
+            KeyboardButton(text="Да"),
+            KeyboardButton(text="Нет"),
+        ],
     ],
-    resize_keyboard=True
+    resize_keyboard=True,
 )
 
 therapy_sessions = {}
@@ -64,9 +66,9 @@ async def send_collage_info(msg: Message) -> None:
     id = msg.chat.id
 
     for i in range(10):
-        file_path = os.path.join(folder_path, f"{i}.jpg")
+        file_path = join(folder_path, f"{i}.jpg")
 
-        if not os.path.exists(file_path):
+        if not exists(file_path):
             logging.error(f"Файл не найден: {file_path}. Отправка медиагруппы отменена.")
             all_files_found = False
             break
@@ -81,13 +83,13 @@ async def send_collage_info(msg: Message) -> None:
     if all_files_found and media_group:
         try:
             await bot.send_media_group(chat_id=id, media=media_group)
-            logging.info(f"Медиагруппа с текстом успешно отправлена в чат {id}")
+            info(f"Медиагруппа с текстом успешно отправлена в чат {id}")
         except Exception as e:
-            logging.error(f"Не удалось отправить медиагруппу в чат {id}: {e}")
+            error(f"Не удалось отправить медиагруппу в чат {id}: {e}")
     elif not all_files_found:
-        logging.warning("Не все фото были найдены.")
+        warn("Не все фото были найдены.")
     else:
-        logging.warning(f"Медиагруппа для чата {id} пуста, хотя ошибок поиска файлов не было.")
+        warn(f"Медиагруппа для чата {id} пуста, хотя ошибок поиска файлов не было.")
 
 async def handle_menu_button(msg: Message, button_name: str, prompt: str) -> None:
     id = str(msg.chat.id)
@@ -99,8 +101,8 @@ async def handle_menu_button(msg: Message, button_name: str, prompt: str) -> Non
 
     msgs_after_send = ai.messages.get(id, [])
     new_msgs_filtered = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
-
     skip_next_ai = False
+
     for m in msgs_after_send[1:]:
         if m.get("role") == SYSTEM_ROLE and m.get("content", "").startswith("Теперь пользователь выбрал тему"):
             skip_next_ai = True
@@ -119,20 +121,22 @@ async def handle_menu_button(msg: Message, button_name: str, prompt: str) -> Non
 async def handle_start(msg: Message, state: FSMContext) -> None:
     if await state.get_state() == TherapyStates.GENERATING_TASK:
         return
+
     welcome_text = (
         f"Привет, {msg.chat.first_name}!\n"
         "Я — Ре-Клей, ваш творческий проводник в мир коллажа. "
         "Я помогу вам совершить первые шаги в новом хобби или "
         "создать новые, уникальные работы, найти вдохновение."
     )
-    await msg.answer(welcome_text, reply_markup=main_keyboard)
 
+    await msg.answer(welcome_text, reply_markup=main_keyboard)
     await send_collage_info(msg)
 
 @router.message(F.text == "💡 Идеи 💡")
 async def handle_kb_idea(msg: Message, state: FSMContext) -> None:
     if await state.get_state() == TherapyStates.GENERATING_TASK:
         return
+
     await handle_menu_button(
         msg,
         "💡 Идеи 💡",
@@ -144,6 +148,7 @@ async def handle_kb_idea(msg: Message, state: FSMContext) -> None:
 async def handle_kb_techniques(msg: Message, state: FSMContext) -> None:
     if await state.get_state() == TherapyStates.GENERATING_TASK:
         return
+
     await handle_menu_button(
         msg,
         "🔧 Техники 🔧",
@@ -155,6 +160,7 @@ async def handle_kb_techniques(msg: Message, state: FSMContext) -> None:
 async def handle_kb_tasks(msg: Message, state: FSMContext) -> None:
     if await state.get_state() == TherapyStates.GENERATING_TASK:
         return
+
     await handle_menu_button(
         msg,
         "📝 Задания 📝",
@@ -166,6 +172,7 @@ async def handle_kb_tasks(msg: Message, state: FSMContext) -> None:
 async def handle_kb_materials(msg: Message, state: FSMContext) -> None:
     if await state.get_state() == TherapyStates.GENERATING_TASK:
         return
+
     await handle_menu_button(
         msg,
         "📚 Материалы 📚",
@@ -173,21 +180,11 @@ async def handle_kb_materials(msg: Message, state: FSMContext) -> None:
         "Расскажи, с чем я могу помочь?"
     )
 
-@router.message(F.text == "🎨 Референсы 🎨")
-async def handle_kb_references(msg: Message, state: FSMContext) -> None:
-    if await state.get_state() == TherapyStates.GENERATING_TASK:
-        return
-    await handle_menu_button(
-        msg,
-        "🎨 Референсы 🎨",
-        "Давай подберём интересные работы для вдохновения! "
-        "Какой стиль тебя интересует?"
-    )
-
 @router.message(F.text == "✨ Вдохновение ✨")
 async def handle_kb_inspiration(msg: Message, state: FSMContext) -> None:
     if await state.get_state() == TherapyStates.GENERATING_TASK:
         return
+
     await handle_menu_button(
         msg,
         "✨ Вдохновение ✨",
@@ -252,7 +249,7 @@ async def handle_therapy_time(msg: Message, state: FSMContext):
             )
         )
     except Exception as e:
-        print(f"Error during therapy task generation for chat {msg.chat.id}: {e}")
+        warn(f"Error during therapy task generation for chat {msg.chat.id}: {e}")
         await msg.answer("Произошла ошибка при генерации задания. Пожалуйста, попробуйте выбрать время еще раз.", reply_markup=therapy_keyboard)
         await state.set_state(TherapyStates.WAITING_TIME)
 
@@ -281,8 +278,9 @@ async def handle_change_task(msg: Message, state: FSMContext):
                 resize_keyboard=True
             )
         )
+
     except Exception as e:
-        print(f"Error during therapy task generation for chat {msg.chat.id}: {e}")
+        warn(f"Error during therapy task generation for chat {msg.chat.id}: {e}")
         await msg.answer("Произошла ошибка при генерации нового задания. Пожалуйста, попробуйте еще раз.", reply_markup=ReplyKeyboardMarkup(
                 keyboard=[
                     [KeyboardButton(text="✅ Начать задание")],
@@ -299,6 +297,8 @@ async def handle_start_task(msg: Message, state: FSMContext):
     await state.set_state(TherapyStates.IN_PROGRESS)
 
     duration = data.get("duration", 0)
+    id = msg.chat.id
+
     if duration > 0:
         await msg.answer(
             f"⏳ Таймер запущен на {duration} минут!",
@@ -309,8 +309,8 @@ async def handle_start_task(msg: Message, state: FSMContext):
             )
         )
 
-        therapy_sessions[str(msg.chat.id)] = asyncio.create_task(
-            finish_therapy_session(msg.chat.id, duration, state)
+        therapy_sessions[str(id)] = asyncio.create_task(
+            finish_therapy_session(id, duration, state)
         )
     else:
         await msg.answer(
@@ -341,6 +341,7 @@ async def handle_cancel_task(msg: Message, state: FSMContext):
 async def finish_therapy_session(chat_id: int, duration: int, state: FSMContext):
     await asyncio.sleep(duration * 60)
     current_state = await state.get_state()
+
     if current_state == TherapyStates.IN_PROGRESS:
         await finish_session(str(chat_id), state)
 
@@ -358,11 +359,11 @@ async def finish_session(chat_id_str: str, state: FSMContext):
             reply_markup=reflection_keyboard
         )
     except TelegramBadRequest as e:
-        print(f"Error sending message in finish_session to {chat_id}: {e}")
+        warn(f"Error sending message in finish_session to {chat_id}: {e}")
         try:
             await bot.send_message(chat_id, "Сессия завершена.", reply_markup=main_keyboard)
         except Exception as final_e:
-            print(f"Error sending final message to {chat_id}: {final_e}")
+            warn(f"Error sending final message to {chat_id}: {final_e}")
 
 
 @router.message(F.text.in_(["Да", "Нет"]))
@@ -386,9 +387,6 @@ async def handle_msg(msg: Message, state: FSMContext) -> None:
         return
 
     current_fsm_state = await state.get_state()
-    if current_fsm_state in [TherapyStates.WAITING_TIME, TherapyStates.CONFIRM_TASK, TherapyStates.IN_PROGRESS]:
-        pass
-
 
     id = str(msg.chat.id)
 
@@ -400,5 +398,5 @@ async def handle_msg(msg: Message, state: FSMContext) -> None:
         await msg.answer(answer, reply_markup=main_keyboard)
 
     except Exception as e:
-        print(f"Error in chat {id}: {e}")
+        warn(f"Error in chat {id}: {e}")
         await msg.answer("⚠ Произошла ошибка, попробуйте позже", reply_markup=main_keyboard)
