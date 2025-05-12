@@ -3,7 +3,7 @@ from together import AsyncTogether
 from warnings import warn
 from config import *
 from db import *
-from tools import search_pinterest, PINTEREST_TOOL_SCHEMA
+# Removed: from tools import search_pinterest, PINTEREST_TOOL_SCHEMA
 
 
 class Ai:
@@ -37,6 +37,7 @@ class Ai:
             self.messages[id] = [{"role": SYSTEM_ROLE, "content": SYSTEM_PROMPT}]
         return self.messages.get(id, []).copy()
 
+
     async def ask(self, id: str, question: str | None) -> str:
         if not question or not question.strip():
             return "Пожалуйста, введите осмысленный запрос."
@@ -53,86 +54,31 @@ class Ai:
                 model=AI_MODEL,
                 messages=current_chat_history,
                 temperature=self.temperature,
-                tools=[PINTEREST_TOOL_SCHEMA]
+                # Removed: tools=[PINTEREST_TOOL_SCHEMA]
             )
 
-            assistant_first_response_message = response.choices[0].message
-            assistant_first_response_dict = assistant_first_response_message.model_dump(exclude_unset=True)
-            self.add_dict_msg(id, assistant_first_response_dict)
+            assistant_response_message = response.choices[0].message
+            assistant_response_dict = assistant_response_message.model_dump(exclude_unset=True)
+            self.add_dict_msg(id, assistant_response_dict)
 
-            if assistant_first_response_message.tool_calls:
-                return await self._handle_tool_calls(id, assistant_first_response_message.tool_calls)
-            
-            return assistant_first_response_message.content or "Не получилось сформировать ответ."
+            # Removed: Check for tool_calls and call to _handle_tool_calls
+            return assistant_response_message.content or "Не получилось сформировать ответ."
 
         except Exception as e:
             print(f"AI processing error in ask for chat {id}: {e}")
+            # Attempt to remove the last user message if an error occurred before AI responded
             if self.messages.get(id) and self.messages[id][-1]["role"] == USER_ROLE:
-                self.messages[id].pop()
-                self.save_messages()
+                 # Check if the very last message is the user message we just added
+                 # If the AI response was added before the error, this check prevents removing it.
+                 # A more robust error handling might be needed depending on exact failure points.
+                 last_msg = self.messages[id][-1]
+                 if last_msg.get("content") == question and last_msg.get("role") == USER_ROLE:
+                     self.messages[id].pop()
+                     self.save_messages() # Save state after removing user message on error
             return "Извините, произошла ошибка при обработке вашего запроса."
 
-    async def _handle_tool_calls(self, id: str, tool_calls_list: list) -> str:
-        for tool_call in tool_calls_list:
-            tool_result_message_dict = {
-                "tool_call_id": tool_call.id,
-                "role": "tool",
-                "name": tool_call.function.name,
-                "content": f"Ошибка: не удалось выполнить инструмент {tool_call.function.name}",
-            }
-            if tool_call.function.name == "search_pinterest":
-                tool_result_message_dict = await self._execute_pinterest_search(tool_call)
-            
-            self.add_dict_msg(id, tool_result_message_dict)
+    # Removed: _handle_tool_calls method
 
-        current_chat_history_with_tool_results = list(self.messages.get(id, []))
-        
-        try:
-            final_response = await self.ai.chat.completions.create(
-                model=AI_MODEL,
-                messages=current_chat_history_with_tool_results,
-                temperature=self.temperature
-            )
-            
-            final_assistant_answer_message = final_response.choices[0].message
-            self.add_dict_msg(id, final_assistant_answer_message.model_dump(exclude_unset=True))
+    # Removed: _execute_pinterest_search method
 
-            return final_assistant_answer_message.content or "Не получилось сформировать ответ после использования инструмента."
-        except Exception as e:
-            print(f"AI processing error in _handle_tool_calls for chat {id}: {e}")
-            return "Извините, произошла ошибка при обработке результатов инструмента."
-
-
-    async def _execute_pinterest_search(self, tool_call) -> dict:
-        function_args = {}
-        try:
-            function_args = json.loads(tool_call.function.arguments)
-            if "query" not in function_args:
-                raise ValueError("Missing 'query' argument for search_pinterest")
-
-            pinterest_results = await search_pinterest(query=function_args["query"])
-            content = str(pinterest_results) if pinterest_results else "Поиск по Pinterest не дал результатов."
-            
-            return {
-                "tool_call_id": tool_call.id,
-                "role": "tool",
-                "name": tool_call.function.name,
-                "content": content,
-            }
-        except json.JSONDecodeError:
-            warn(f"Error decoding JSON arguments for search_pinterest: {tool_call.function.arguments}")
-            content = "Ошибка: неверный формат аргументов для search_pinterest."
-        except ValueError as ve:
-            warn(f"ValueError in search_pinterest arguments: {ve}")
-            content = f"Ошибка в аргументах для search_pinterest: {ve}"
-        except Exception as e:
-            warn(f"Error executing Pinterest search with args {function_args}: {e}")
-            content = f"Ошибка при выполнении поиска в Pinterest: {e}"
-        
-        return {
-            "tool_call_id": tool_call.id,
-            "role": "tool",
-            "name": tool_call.function.name,
-            "content": content,
-        }
-
+# ... rest of file if any ...
